@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>JumpInHere — Karty techniczne</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --blue:#185FA5;--blue-light:#E6F1FB;--blue-dark:#0C447C;
+    --amber:#854F0B;--amber-light:#FAEEDA;--amber-dark:#633806;
+    --teal:#0F6E56;--teal-light:#E1F5EE;--teal-dark:#085041;
+    --text:#1a1a1a;--text2:#555;--text3:#888;--bg:#fff;--bg2:#f8f7f4;--border:rgba(0,0,0,0.1);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--text:#f0f0f0;--text2:#aaa;--text3:#777;--bg:#1a1a1a;--bg2:#242424;--border:rgba(255,255,255,0.1);
+    --blue-light:#0C447C;--blue-dark:#B5D4F4;--amber-light:#412402;--amber-dark:#FAC775;--teal-light:#04342C;--teal-dark:#9FE1CB;}
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg2);color:var(--text);min-height:100vh}
+
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:200}
+  .loading-screen.hidden{display:none}
+  .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.7s linear infinite}
+  .spinner.sm{width:18px;height:18px;border-width:2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-size:14px;color:var(--text3)}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;transition:transform 0.3s;z-index:300;white-space:nowrap;pointer-events:none}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.error{background:#c0392b}
+
+  .firm-switcher{display:flex;background:var(--bg);border-bottom:1px solid var(--border)}
+  .firm-tab{flex:1;padding:13px 8px;font-size:13px;font-weight:600;text-align:center;cursor:pointer;color:var(--text3);border-bottom:3px solid transparent;transition:all 0.15s;line-height:1.3}
+  .firm-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+  .firm-tab .tab-sub{font-size:10px;font-weight:400;margin-top:2px;color:var(--text3)}
+
+  .list-header{padding:15px 16px 8px;background:var(--bg)}
+  .list-header h1{font-size:19px;font-weight:600;letter-spacing:-0.3px}
+  .list-header p{font-size:12px;color:var(--text3);margin-top:2px}
+  .apt-list{padding:10px 12px}
+  .apt-card{background:var(--bg);border-radius:12px;border:1px solid var(--border);padding:13px 15px;margin-bottom:9px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background 0.15s}
+  .apt-card:active{background:var(--bg2)}
+  .apt-icon{width:42px;height:42px;border-radius:10px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
+  .apt-icon.g{background:var(--teal-light)}
+  .apt-info{flex:1;min-width:0}
+  .apt-name{font-size:15px;font-weight:600;color:var(--text)}
+  .apt-addr{font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .apt-pills{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+  .pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:0.02em}
+  .pill-blue{background:var(--blue-light);color:var(--blue-dark)}
+  .pill-teal{background:var(--teal-light);color:var(--teal-dark)}
+  .chevron{color:var(--text3);font-size:18px;flex-shrink:0}
+
+  .detail{display:none}
+  .detail-header{background:var(--bg);padding:13px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .back-btn{width:36px;height:36px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--text2);flex-shrink:0}
+  .detail-title{font-size:17px;font-weight:600}
+  .detail-sub{font-size:12px;color:var(--text3)}
+
+  .section{background:var(--bg);margin:10px 12px;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+  .section-head{padding:11px 14px 6px;display:flex;align-items:center;gap:8px}
+  .section-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .section-icon.intercom{background:var(--teal-light)}
+  .section-icon.water{background:var(--blue-light)}
+  .section-icon.electric{background:var(--amber-light)}
+  .section-label{font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase}
+  .info-block{padding:8px 14px 12px}
+  .info-text{font-size:15px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:3px}
+  .info-desc{font-size:13px;color:var(--text2);line-height:1.6}
+  .edit-btn{font-size:12px;font-weight:600;color:var(--text3);background:var(--bg2);border:1px solid var(--border);padding:4px 10px;border-radius:20px;cursor:pointer;margin-left:auto;white-space:nowrap}
+
+  .photo-section{background:var(--bg);margin:10px 12px;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+  .photo-section-head{padding:10px 14px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+  .photo-section-label{font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase}
+  .photo-section-label.water{color:var(--blue)}
+  .photo-section-label.electric{color:var(--amber)}
+
+  /* UPLOAD BUTTON */
+  .upload-btn{font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;position:relative;overflow:hidden}
+  .upload-btn.water{color:var(--blue-dark);background:var(--blue-light)}
+  .upload-btn.electric{color:var(--amber-dark);background:var(--amber-light)}
+  .upload-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+  .upload-btn .upload-spinner{display:none}
+  .upload-btn.loading .upload-spinner{display:block}
+  .upload-btn.loading .upload-label{display:none}
+
+  .photo-inner{padding:10px 12px}
+  .photos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .photo-item{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:4/3;background:var(--bg2);border:1px solid var(--border)}
+  .photo-item img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo-cap{position:absolute;bottom:0;left:0;right:0;padding:4px 8px;background:rgba(0,0,0,0.55);font-size:10px;font-weight:600;color:#fff}
+  .photo-del{position:absolute;top:4px;right:4px;width:24px;height:24px;background:rgba(0,0,0,0.55);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:#fff;border:none}
+  .no-photos{padding:10px 0 4px;color:var(--text3);font-size:12px}
+
+  /* UPLOAD PROGRESS */
+  .upload-progress{display:none;margin:8px 0 4px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+  .upload-progress.show{display:block}
+  .upload-progress-bar{height:100%;background:var(--blue);width:0%;transition:width 0.2s;border-radius:2px}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;padding:16px}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--bg);border-radius:16px;width:100%;max-width:380px;padding:20px;max-height:90vh;overflow-y:auto}
+  .modal h3{font-size:17px;font-weight:600;margin-bottom:4px}
+  .modal .modal-sub{font-size:12px;color:var(--text3);margin-bottom:16px}
+  .modal label{display:block;font-size:12px;font-weight:600;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
+  .modal input,.modal textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;background:var(--bg2);color:var(--text);margin-bottom:14px;font-family:inherit}
+  .modal textarea{min-height:60px;resize:vertical}
+  .modal-btns{display:flex;gap:8px}
+  .btn-cancel{flex:1;padding:11px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer}
+  .btn-save{flex:1;padding:11px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+  .btn-save:disabled{opacity:0.6;cursor:not-allowed}
+  .footer{height:28px}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Ładowanie danych…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="listView" style="display:none">
+  <div class="firm-switcher">
+    <div class="firm-tab active" id="tab1" onclick="switchFirm(1)">
+      🏠 Nowy Dwór + Warszawa
+      <div class="tab-sub">firma sprzątająca #1</div>
+    </div>
+    <div class="firm-tab" id="tab2" onclick="switchFirm(2)">
+      ⚓ Gdańsk
+      <div class="tab-sub">firma sprzątająca #2</div>
+    </div>
+  </div>
+  <div class="list-header">
+    <h1>🔧 Karty techniczne</h1>
+    <p id="listSub">Nowy Dwór Mazowiecki + Warszawa</p>
+  </div>
+  <div class="apt-list" id="aptList"></div>
+</div>
+
+<div id="detailView" class="detail">
+  <div class="detail-header">
+    <div class="back-btn" onclick="showList()">←</div>
+    <div style="flex:1;min-width:0">
+      <div class="detail-title" id="detailName"></div>
+      <div class="detail-sub" id="detailAddr"></div>
+    </div>
+    <div class="spinner sm" id="detailSpinner" style="display:none"></div>
+  </div>
+
+  <div class="section" style="margin-top:12px">
+    <div class="section-head">
+      <div class="section-icon intercom">🔔</div>
+      <div class="section-label">Domofon / wejście</div>
+      <button class="edit-btn" onclick="openEdit('intercom')">Edytuj</button>
+    </div>
+    <div class="info-block">
+      <div class="info-text" id="intercomMain"></div>
+      <div class="info-desc" id="intercomDesc"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-icon water">💧</div>
+      <div class="section-label">Woda — gdzie zakręcić</div>
+      <button class="edit-btn" onclick="openEdit('water')">Edytuj</button>
+    </div>
+    <div class="info-block">
+      <div class="info-text" id="waterMain"></div>
+      <div class="info-desc" id="waterDesc"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-icon electric">⚡</div>
+      <div class="section-label">Prąd — gdzie włączyć</div>
+      <button class="edit-btn" onclick="openEdit('electric')">Edytuj</button>
+    </div>
+    <div class="info-block">
+      <div class="info-text" id="electricMain"></div>
+      <div class="info-desc" id="electricDesc"></div>
+    </div>
+  </div>
+
+  <!-- ZDJĘCIA WODY -->
+  <div class="photo-section">
+    <div class="photo-section-head">
+      <div class="photo-section-label water">💧 Zdjęcia — woda</div>
+      <label class="upload-btn water" id="uploadBtnWater">
+        <span class="upload-label">+ Dodaj zdjęcie</span>
+        <div class="spinner sm upload-spinner"></div>
+        <input type="file" accept="image/*" onchange="handleUpload(event,'water')">
+      </label>
+    </div>
+    <div class="photo-inner">
+      <div class="upload-progress" id="progressWater"><div class="upload-progress-bar" id="progressBarWater"></div></div>
+      <div class="photos-grid" id="photosGridWater"></div>
+      <div class="no-photos" id="noPhotosWater">Brak zdjęć. Dodaj pierwsze zdjęcie.</div>
+    </div>
+  </div>
+
+  <!-- ZDJĘCIA PRĄDU -->
+  <div class="photo-section">
+    <div class="photo-section-head">
+      <div class="photo-section-label electric">⚡ Zdjęcia — prąd</div>
+      <label class="upload-btn electric" id="uploadBtnElectric">
+        <span class="upload-label">+ Dodaj zdjęcie</span>
+        <div class="spinner sm upload-spinner"></div>
+        <input type="file" accept="image/*" onchange="handleUpload(event,'electric')">
+      </label>
+    </div>
+    <div class="photo-inner">
+      <div class="upload-progress" id="progressElectric"><div class="upload-progress-bar" id="progressBarElectric"></div></div>
+      <div class="photos-grid" id="photosGridElectric"></div>
+      <div class="no-photos" id="noPhotosElectric">Brak zdjęć. Dodaj pierwsze zdjęcie.</div>
+    </div>
+  </div>
+
+  <div class="footer"></div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3 id="editModalTitle">Edytuj</h3>
+    <div class="modal-sub">Zostaw pole puste żeby zachować obecny wpis.</div>
+    <label>Lokalizacja (krótko)</label>
+    <input type="text" id="editMain">
+    <label>Szczegółowy opis</label>
+    <textarea id="editDesc"></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeEditModal()">Anuluj</button>
+      <button class="btn-save" id="editSaveBtn" onclick="saveEdit()">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://voxtrfnigiblupfshvrc.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZveHRyZm5pZ2libHVwZnNodnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDk1OTIsImV4cCI6MjA5NDMyNTU5Mn0.Vmw7K8ChpXmi15hs9rEf_yBd_kUvhmPW9auQjBCn-uo';
+const BUCKET  = 'photos';
+
+const APARTMENTS = [
+  {id:'jarzebinowa1',firm:1,icon:'🏢',name:'Jarzębinowa Loft I',address:'Jarzębinowa 2A/91, Nowy Dwór Mazowiecki',floor:'Parter (winda — piętro 0)'},
+  {id:'jarzebinowa2',firm:1,icon:'🏢',name:'Jarzębinowa Loft II',address:'Jarzębinowa 7/40, Nowy Dwór Mazowiecki',floor:'4. piętro'},
+  {id:'jarzebinowa3',firm:1,icon:'🏢',name:'Jarzębinowa Loft III',address:'Jarzębinowa 92A/123, Nowy Dwór Mazowiecki',floor:'3. piętro'},
+  {id:'pileckiego1',firm:1,icon:'🏠',name:'Pileckiego I',address:'Rotmistrza Witolda Pileckiego 92/12, Nowy Dwór Mazowiecki',floor:'1. piętro'},
+  {id:'pileckiego2',firm:1,icon:'🏠',name:'Pileckiego II',address:'Rotmistrza Witolda Pileckiego 92A/26, Nowy Dwór Mazowiecki',floor:'1. piętro'},
+  {id:'pileckiego3',firm:1,icon:'🏠',name:'Pileckiego III',address:'Rotmistrza Witolda Pileckiego 92A/27, Nowy Dwór Mazowiecki',floor:'1. piętro'},
+  {id:'pileckiego4',firm:1,icon:'🏠',name:'Pileckiego IV',address:'Rotmistrza Witolda Pileckiego 94/77, Nowy Dwór Mazowiecki',floor:'4. piętro'},
+  {id:'flymodlin',firm:1,icon:'✈️',name:'Fly Modlin',address:'29 Listopada 112/31, Nowy Dwór Mazowiecki (Twierdza Modlin)',floor:'1. piętro'},
+  {id:'aluzyjna',firm:1,icon:'🏡',name:'Aluzyjna Residence',address:'Aluzyjna 6/6, Warszawa',floor:'1. piętro'},
+  {id:'skyport1',firm:2,icon:'🛫',name:'SkyPort Gdańsk I',address:'Prof. Jerzego Stankiewicza 20/30, Gdańsk',floor:'2. piętro'},
+  {id:'skyport2',firm:2,icon:'🛫',name:'SkyPort Gdańsk II',address:'Prof. Jerzego Stankiewicza 20/31, Gdańsk',floor:'2. piętro'},
+  {id:'motlawa',firm:2,icon:'⚓',name:'Motława Prestige Apartment',address:'Jaglana 6D/26, Gdańsk',floor:'6. piętro'}
+];
+
+let currentApt = null, editField = null, activeFirm = 1;
+let dbData = {}, dbPhotos = {};
+
+const H = {
+  'apikey': SUPA_KEY,
+  'Authorization': 'Bearer ' + SUPA_KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'resolution=merge-duplicates,return=representation'
+};
+
+// ── API ────────────────────────────────────────────────────
+async function supaGet(table, params='') {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`, {headers: H});
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function supaUpsert(table, body) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {method:'POST', headers: H, body: JSON.stringify(body)});
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function supaDelete(table, match) {
+  const q = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${q}`, {method:'DELETE', headers: H});
+  if (!r.ok) throw new Error(await r.text());
+}
+
+// ── STORAGE UPLOAD ─────────────────────────────────────────
+async function uploadToStorage(file, path, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${SUPA_URL}/storage/v1/object/${BUCKET}/${path}`);
+    xhr.setRequestHeader('apikey', SUPA_KEY);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + SUPA_KEY);
+    xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded/e.total*100); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+      else reject(new Error(xhr.responseText));
+    };
+    xhr.onerror = () => reject(new Error('Upload failed'));
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    xhr.send(fd);
+  });
+}
+
+function storageUrl(path) {
+  return `${SUPA_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+}
+
+// ── TOAST ──────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, isError=false) {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError?' error':'');
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── INIT ───────────────────────────────────────────────────
+async function loadAllData() {
+  try {
+    const [rows, photos] = await Promise.all([
+      supaGet('apt_data','select=*'),
+      supaGet('apt_photos','select=*&order=created_at.asc')
+    ]);
+    rows.forEach(r => dbData[r.id] = r);
+    photos.forEach(p => {
+      if (!dbPhotos[p.apt_id]) dbPhotos[p.apt_id] = [];
+      dbPhotos[p.apt_id].push(p);
+    });
+  } catch(e) {
+    showToast('Błąd połączenia z bazą', true);
+  }
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('listView').style.display = 'block';
+  renderList();
+}
+
+// ── LIST ───────────────────────────────────────────────────
+function switchFirm(n) {
+  activeFirm = n;
+  document.getElementById('tab1').className = 'firm-tab'+(n===1?' active':'');
+  document.getElementById('tab2').className = 'firm-tab'+(n===2?' active':'');
+  document.getElementById('listSub').textContent = n===1 ? 'Nowy Dwór Mazowiecki + Warszawa' : 'Gdańsk — Trójmiasto';
+  renderList();
+}
+function renderList() {
+  document.getElementById('aptList').innerHTML = APARTMENTS.filter(a=>a.firm===activeFirm).map(a=>`
+    <div class="apt-card" onclick="showDetail('${a.id}')">
+      <div class="apt-icon${a.firm===2?' g':''}">${a.icon}</div>
+      <div class="apt-info">
+        <div class="apt-name">${a.name}</div>
+        <div class="apt-addr">${a.address}</div>
+        <div class="apt-pills">
+          <span class="pill pill-blue">${a.floor}</span>
+          <span class="pill pill-teal">${a.firm===2?'Gdańsk':'NDM / Warszawa'}</span>
+        </div>
+      </div>
+      <div class="chevron">›</div>
+    </div>`).join('');
+}
+
+// ── DETAIL ─────────────────────────────────────────────────
+const DEFAULTS = {
+  intercom:{main:'Uzupełnij numer domofonu / kod wejścia',desc:'Kliknij "Edytuj" aby uzupełnić'},
+  water:   {main:'Uzupełnij lokalizację zaworu wody',     desc:'Kliknij "Edytuj" aby uzupełnić'},
+  electric:{main:'Uzupełnij lokalizację skrzynki prądu', desc:'Kliknij "Edytuj" aby uzupełnić'}
+};
+
+function showDetail(id) {
+  currentApt = APARTMENTS.find(a=>a.id===id);
+  const d = dbData[id] || {};
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('detailView').style.display = 'block';
+  document.getElementById('detailName').textContent = currentApt.name;
+  document.getElementById('detailAddr').textContent = currentApt.address;
+  ['intercom','water','electric'].forEach(f => {
+    document.getElementById(f+'Main').textContent = d[f+'_main'] || DEFAULTS[f].main;
+    document.getElementById(f+'Desc').textContent = d[f+'_desc'] || DEFAULTS[f].desc;
+  });
+  renderPhotos('water');
+  renderPhotos('electric');
+  window.scrollTo(0,0);
+}
+function showList() {
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('listView').style.display = 'block';
+}
+function spinner(on) {
+  document.getElementById('detailSpinner').style.display = on ? 'block' : 'none';
+}
+
+// ── PHOTOS ─────────────────────────────────────────────────
+function renderPhotos(type) {
+  const photos = (dbPhotos[currentApt.id]||[]).filter(p=>p.type===type);
+  const grid = document.getElementById('photosGrid'+cap(type));
+  const noP  = document.getElementById('noPhotos'+cap(type));
+  if (!photos.length) { grid.innerHTML=''; noP.style.display='block'; return; }
+  noP.style.display = 'none';
+  grid.innerHTML = photos.map(p=>`
+    <div class="photo-item">
+      <img src="${storageUrl(p.url)}" alt="${p.caption||''}"
+        onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:#888;padding:8px;text-align:center\'>Nie można wczytać</div>'">
+      ${p.caption?`<div class="photo-cap">${p.caption}</div>`:''}
+      <button class="photo-del" onclick="deletePhoto('${p.id}','${p.url}','${type}')">×</button>
+    </div>`).join('');
+}
+
+async function handleUpload(e, type) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = ''; // reset input
+
+  // max 10MB
+  if (file.size > 10*1024*1024) { showToast('Zdjęcie za duże (max 10 MB)', true); return; }
+
+  const btn      = document.getElementById('uploadBtn'+cap(type));
+  const progWrap = document.getElementById('progress'+cap(type));
+  const progBar  = document.getElementById('progressBar'+cap(type));
+
+  btn.classList.add('loading');
+  progWrap.classList.add('show');
+  progBar.style.width = '0%';
+  spinner(true);
+
+  try {
+    // unikalny path: apt_id/type/timestamp_filename
+    const ext  = file.name.split('.').pop().toLowerCase();
+    const path = `${currentApt.id}/${type}/${Date.now()}.${ext}`;
+
+    await uploadToStorage(file, path, pct => { progBar.style.width = pct+'%'; });
+
+    // zapisz rekord w bazie
+    const [saved] = await supaUpsert('apt_photos', {
+      apt_id:  currentApt.id,
+      type:    type,
+      url:     path,
+      caption: ''
+    });
+    if (!dbPhotos[currentApt.id]) dbPhotos[currentApt.id] = [];
+    dbPhotos[currentApt.id].push(saved);
+    renderPhotos(type);
+    showToast('Zdjęcie dodane ✓');
+  } catch(err) {
+    showToast('Błąd wgrywania: ' + err.message, true);
+  }
+
+  btn.classList.remove('loading');
+  progWrap.classList.remove('show');
+  progBar.style.width = '0%';
+  spinner(false);
+}
+
+async function deletePhoto(photoId, path, type) {
+  if (!confirm('Usunąć to zdjęcie?')) return;
+  spinner(true);
+  try {
+    // usuń plik ze storage
+    await fetch(`${SUPA_URL}/storage/v1/object/${BUCKET}/${path}`, {
+      method: 'DELETE',
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY}
+    });
+    // usuń rekord z bazy
+    await supaDelete('apt_photos', {id: photoId});
+    dbPhotos[currentApt.id] = (dbPhotos[currentApt.id]||[]).filter(p=>p.id!==photoId);
+    renderPhotos(type);
+    showToast('Zdjęcie usunięte');
+  } catch(err) {
+    showToast('Błąd usuwania', true);
+  }
+  spinner(false);
+}
+
+// ── EDIT ───────────────────────────────────────────────────
+const EDIT_CFG = {
+  intercom:{title:'🔔 Edytuj — Domofon',    mp:'np. Domofon #23, kod furtki 4812#',     dp:'np. Klatka A, winda dostępna…'},
+  water:   {title:'💧 Edytuj — Woda',        mp:'np. Piwnica — pomieszczenie P-03',       dp:'np. Drzwi metalowe po prawej od windy…'},
+  electric:{title:'⚡ Edytuj — Prąd',        mp:'np. Korytarz — skrzynka przy drzwiach', dp:'np. Biała skrzynka 120 cm od podłogi…'}
+};
+
+function openEdit(field) {
+  editField = field;
+  const d   = dbData[currentApt.id] || {};
+  const cfg = EDIT_CFG[field];
+  document.getElementById('editModalTitle').textContent = cfg.title;
+  document.getElementById('editMain').placeholder = cfg.mp;
+  document.getElementById('editDesc').placeholder = cfg.dp;
+  document.getElementById('editMain').value = d[field+'_main'] || '';
+  document.getElementById('editDesc').value = d[field+'_desc'] || '';
+  document.getElementById('editModal').classList.add('open');
+  setTimeout(()=>document.getElementById('editMain').focus(), 100);
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
+
+async function saveEdit() {
+  const mainVal = document.getElementById('editMain').value.trim();
+  const descVal = document.getElementById('editDesc').value.trim();
+  if (!mainVal && !descVal) { closeEditModal(); return; }
+
+  const btn = document.getElementById('editSaveBtn');
+  btn.disabled = true; btn.textContent = 'Zapisywanie…';
+  spinner(true);
+
+  try {
+    const existing = dbData[currentApt.id] || {};
+    const payload  = {id: currentApt.id, ...existing};
+    if (mainVal) payload[editField+'_main'] = mainVal;
+    if (descVal) payload[editField+'_desc'] = descVal;
+    const [saved] = await supaUpsert('apt_data', payload);
+    dbData[currentApt.id] = saved;
+    document.getElementById(editField+'Main').textContent = saved[editField+'_main'] || DEFAULTS[editField].main;
+    document.getElementById(editField+'Desc').textContent = saved[editField+'_desc'] || DEFAULTS[editField].desc;
+    closeEditModal();
+    showToast('Zapisano ✓');
+  } catch(err) {
+    showToast('Błąd zapisu', true);
+  }
+  btn.disabled = false; btn.textContent = 'Zapisz';
+  spinner(false);
+}
+
+// ── UTILS ──────────────────────────────────────────────────
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+document.getElementById('editModal').addEventListener('click', function(e){ if(e.target===this) closeEditModal(); });
+
+loadAllData();
+</script>
+</body>
+</html>
